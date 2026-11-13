@@ -23,28 +23,27 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
         with:
-          node-version: 20
+          ref: main          # aina uusin versio, myös uusinta-ajossa
 
       - name: Hae kurssit
         continue-on-error: true
         run: node scripts/hae-kurssit.mjs
 
       - name: Tallenna kurssit
+        continue-on-error: true
         run: |
           if ! git diff --quiet -- prices.json; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add prices.json
             git commit -m "Kurssipäivitys $(date -u +%F)"
-            git push
+            git push origin HEAD:main
           fi
 
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: .
       - id: deployment
