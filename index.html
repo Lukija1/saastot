@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Säästöt</title>
+<meta name="theme-color" content="#0c1a2a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="kuvake-192.png">
+<link rel="apple-touch-icon" href="kuvake-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0c1a2a; --card:rgba(20,40,62,.72); --ink:#eaf2fa; --muted:#8fa6bd; --line:rgba(140,185,230,.16);
+  --accent:#5aaee8; --accent-soft:rgba(90,174,232,.16); --etf:#7fd6cf; --etf-soft:rgba(127,214,207,.14);
+  --pos:#6fd49a; --neg:#ff8f87; --shadow:0 6px 24px rgba(0,8,20,.35);
+  --field:rgba(8,20,34,.7);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    linear-gradient(118deg, transparent 0 38%, rgba(120,180,240,.10) 38% 38.4%, transparent 38.4% 52%, rgba(120,180,240,.07) 52% 61%, transparent 61%),
+    linear-gradient(118deg, transparent 0 70%, rgba(150,200,250,.12) 70% 70.3%, transparent 70.3%),
+    repeating-linear-gradient(118deg, rgba(255,255,255,.012) 0 2px, transparent 2px 5px),
+    radial-gradient(120% 80% at 80% 10%, #1d4a75 0%, transparent 60%),
+    linear-gradient(160deg, #0f2740 0%, #0b1b2c 55%, #071320 100%);}
+.card,.empty{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.total{background:linear-gradient(90deg,#ffffff,#a9d3f5);-webkit-background-clip:text;background-clip:text;color:transparent}
+body{padding:env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px}
+header{padding:12px 4px 20px}
+.label{font-size:13px;color:var(--muted);letter-spacing:.02em}
+.total{font-size:40px;font-weight:700;letter-spacing:-.02em;margin:4px 0 8px;font-variant-numeric:tabular-nums}
+.split{display:flex;gap:16px;font-size:14px;color:var(--muted);flex-wrap:wrap}
+.split b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);margin-top:14px}
+.bar span{display:block;height:100%}
+.status{font-size:13px;color:var(--muted);padding:6px 4px;min-height:1em}
+.status.err{color:var(--neg)}
+h2{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:22px 4px 10px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow);border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;width:100%;text-align:left;font:inherit;color:inherit}
+.card:active{transform:scale(.99)}
+.card .name{font-weight:600;font-size:16px}
+.card .sub{font-size:13px;color:var(--muted);margin-top:3px}
+.card .val{font-weight:600;font-size:17px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.card .chg{white-space:nowrap;font-size:13px;text-align:right;margin-top:3px;font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.pos{color:var(--pos)} .neg{color:var(--neg)}
+.stale{color:var(--neg)}
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:28px 20px;text-align:center;color:var(--muted);font-size:15px;line-height:1.5}
+.btn{font:inherit;font-weight:600;font-size:15px;border:0;border-radius:12px;padding:13px 16px;cursor:pointer;background:var(--accent-soft);color:var(--accent)}
+.btn.primary{background:linear-gradient(135deg,#6cbcf0,#3f8fd0);color:#05182b}
+.btn.danger{background:transparent;color:var(--neg)}
+.btn.ghost{background:transparent;color:var(--muted)}
+.btn:disabled{opacity:.5}
+.addacc{width:100%;margin-top:8px;background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom));box-shadow:0 6px 20px rgba(0,0,0,.18);padding:15px 28px;border-radius:999px;font-size:16px}
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(2,8,16,.6);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.scrim.open{display:flex}
+.sheet{background:linear-gradient(170deg,#14304d,#0d1f33);border-top:1px solid var(--line);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto;animation:up .18s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+.sheet h3{margin:0 0 4px;font-size:20px}
+.sheet .hint{color:var(--muted);font-size:14px;margin:0 0 16px;line-height:1.45}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.field input,.field select{width:100%;font:inherit;font-size:17px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--field);color:var(--ink)}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.seg{display:flex;background:var(--field);border-radius:12px;padding:4px;gap:4px;margin-bottom:14px;border:1px solid var(--line)}
+.seg button{flex:1;font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;color:var(--muted);padding:9px 6px;border-radius:9px;cursor:pointer}
+.seg button.on{background:#1d3e60;color:var(--ink);box-shadow:var(--shadow)}
+.actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.formerr{color:var(--neg);font-size:14px;min-height:1em;margin:4px 0 8px}
+.hist{margin:16px 0 8px;border-top:1px solid var(--line)}
+.hist div{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hist .d{color:var(--muted);font-size:12px;margin-top:2px}
+.hist .x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;padding:0 0 0 8px}
+.big{font-size:28px;font-weight:700;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.topbar{display:flex;justify-content:space-between;align-items:center}
+.iconbtn{background:transparent;border:0;color:var(--muted);padding:8px;margin:-8px -8px 0 0;cursor:pointer;border-radius:10px}
+.iconbtn svg{display:block}
+.banner{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.45;margin:0 0 12px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner .btn{padding:9px 12px;font-size:14px;white-space:nowrap}
+.confirm{background:var(--etf-soft);border-radius:12px;padding:12px;margin-top:10px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="topbar"><div class="label">Säästöt yhteensä</div>
+      <button class="iconbtn" id="setBtn" aria-label="Asetukset ja varmuuskopiot"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
+    <div class="total" id="total">–</div>
+    <div class="split" id="split"></div>
+    <div class="bar" id="bar"></div>
+  </header>
+  <div class="status" id="status"></div>
+  <div id="backupBanner"></div>
+  <div id="lists"></div>
+  <button class="btn addacc" id="addAccBtn" hidden>+ Lisää tili tai rahasto</button>
+</div>
+<button class="btn primary fab" id="fab" hidden>+ Kirjaa siirto</button>
+
+<div class="scrim" id="scrim"><div class="sheet" id="sheet"></div></div>
+
+<script>
+const fmt = new Intl.NumberFormat('fi-FI',{style:'currency',currency:'EUR'});
+const fmtN = new Intl.NumberFormat('fi-FI',{maximumFractionDigits:4});
+const fmtP = new Intl.NumberFormat('fi-FI',{maximumFractionDigits:1,minimumFractionDigits:1});
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { if(v==null) return NaN; const s=String(v).replace(/\s/g,'').replace(',', '.'); return s===''?NaN:Number(s); };
+const today = () => new Date().toISOString().slice(0,10);
+const fdate = d => { if(!d) return ''; const [y,m,dd]=d.slice(0,10).split('-'); return `${+dd}.${+m}.${y}`; };
+const priceKey = a => (a.ticker || a.id).toUpperCase().replace(/[^A-Z0-9_\-.~:@+]/g,'_');
+
+let db=null, accounts=[], entries=[], prices={}, loaded={a:true,e:true,p:true}, writable=true;
+
+function setStatus(t, err){ const s=$('#status'); s.textContent=t||''; s.className='status'+(err?' err':''); }
+
+function calc(){
+  const per={};
+  for(const a of accounts) per[a.id]={amount:0,units:0,list:[]};
+  for(const e of entries){ const p=per[e.accountId]; if(!p) continue; p.amount+=Number(e.amount)||0; p.units+=Number(e.units)||0; p.list.push(e); }
+  for(const id in per) per[id].list.sort((x,y)=>(y.date||'').localeCompare(x.date||'')||(y.createdAt||0)-(x.createdAt||0));
+  const out=accounts.map(a=>{
+    const p=per[a.id];
+    if(a.kind==='etf'){
+      const pr=prices[priceKey(a)];
+      const price=pr?Number(pr.price):NaN;
+      const value=isFinite(price)?p.units*price:p.amount;
+      return {...a, units:p.units, invested:p.amount, price, priceDate:pr&&pr.date, value, gain:isFinite(price)?value-p.amount:null, list:p.list};
+    }
+    return {...a, value:p.amount, list:p.list};
+  });
+  return out;
+}
+
+function render(){
+  if(!(loaded.a&&loaded.e&&loaded.p)) return;
+  const rows=calc();
+  const bank=rows.filter(r=>r.kind!=='etf'), etf=rows.filter(r=>r.kind==='etf');
+  const sb=bank.reduce((s,r)=>s+r.value,0), se=etf.reduce((s,r)=>s+r.value,0), tot=sb+se;
+  $('#total').textContent=fmt.format(tot);
+  $('#split').innerHTML = rows.length ? `<span>Tilit <b>${fmt.format(sb)}</b></span><span>Rahastot <b>${fmt.format(se)}</b></span>` : '';
+  $('#bar').innerHTML = tot>0 ? `<span style="width:${sb/tot*100}%;background:var(--accent)"></span><span style="width:${se/tot*100}%;background:var(--etf)"></span>` : '';
+  $('#bar').style.display = tot>0 ? 'flex':'none';
+  let h='';
+  if(!rows.length){
+    h=`<div class="empty">Ei vielä tilejä.<br>Lisää ensin pankkitilisi ja ETF-rahastosi, sitten voit kirjata niille siirtoja.<br><br>Onko sinulla varmuuskopio? Tuo se oikean yläkulman ⚙-valikosta.</div>`;
+  } else {
+    if(bank.length){ h+='<h2>Pankkitilit</h2>'+bank.map(cardBank).join(''); }
+    if(etf.length){ h+='<h2>Rahastot</h2>'+etf.map(cardEtf).join(''); }
+  }
+  $('#lists').innerHTML=h;
+  $('#addAccBtn').hidden=!writable;
+  $('#fab').hidden=!writable||!rows.length;
+  document.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>openDetail(b.dataset.acc));
+}
+function cardBank(r){
+  const last=r.list[0];
+  return `<button class="card" data-acc="${r.id}"><div><div class="name"><span class="dot" style="background:var(--accent)"></span>${esc(r.name)}</div>
+  <div class="sub">${last?'Viimeisin: '+fdate(last.date):'Ei kirjauksia'}</div></div>
+  <div><div class="val">${fmt.format(r.value)}</div></div></button>`;
+}
+function cardEtf(r){
+  const old = r.priceDate && (Date.now()-new Date(r.priceDate).getTime())>4*864e5;
+  const sub = isFinite(r.price)
+    ? `${fmtN.format(r.units)} kpl × ${fmt.format(r.price)} · <span class="${old?'stale':''}">${fdate(r.priceDate)}</span>`
+    : 'Kurssia ei vielä asetettu';
+  const g = r.gain!=null ? `<div class="chg ${r.gain>=0?'pos':'neg'}">${r.gain>=0?'+':''}${fmt.format(r.gain)}${r.invested>0?` (${r.gain>=0?'+':''}${fmtP.format(r.gain/r.invested*100)}&nbsp;%)`:''}</div>` : '';
+  return `<button class="card" data-acc="${r.id}"><div><div class="name"><span class="dot" style="background:var(--etf)"></span>${esc(r.name)}${r.ticker?` <span style="color:var(--muted);font-weight:500;font-size:13px">${esc(r.ticker)}</span>`:''}</div>
+  <div class="sub">${sub}</div></div><div><div class="val">${fmt.format(r.value)}</div>${g}</div></button>`;
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html, bind){ $('#sheet').innerHTML=html; $('#scrim').classList.add('open'); bind&&bind(); }
+function closeSheet(){ $('#scrim').classList.remove('open'); $('#sheet').innerHTML=''; }
+$('#scrim').addEventListener('click',e=>{ if(e.target.id==='scrim') closeSheet(); });
+
+function seg(name, opts, val){ return `<div class="seg" data-seg="${name}">${opts.map(([v,l])=>`<button type="button" data-v="${v}" class="${v===val?'on':''}">${l}</button>`).join('')}</div>`; }
+function bindSeg(name, onChange){ const el=document.querySelector(`[data-seg="${name}"]`); el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); onChange(b.dataset.v); }); return ()=>el.querySelector('.on').dataset.v; }
+
+async function guarded(btn, fn){
+  btn.disabled=true; $('#formerr')&&($('#formerr').textContent='');
+  try{ await fn(); closeSheet(); }
+  catch(e){ btn.disabled=false; const m = e&&e.code==='quota_exceeded'?'Tallennustila on täynnä.':e&&e.code==='invalid_argument'?'Tallennus ei onnistunut (ei oikeutta?).':'Tallennus ei onnistunut, yritä uudelleen.'; if($('#formerr')) $('#formerr').textContent=m; }
+}
+
+function openAccountForm(acc){
+  const a=acc||{kind:'bank',name:'',ticker:''};
+  openSheet(`<h3>${acc?'Muokkaa':'Uusi tili tai rahasto'}</h3><p class="hint">${acc?'':'Pankkitilin saldo on kirjausten summa. Rahaston arvo on osuuksien määrä × kurssi.'}</p>
+  ${acc?'':seg('kind',[['bank','Pankkitili'],['etf','ETF-rahasto']],a.kind)}
+  <div class="field"><label>Nimi</label><input id="fName" value="${esc(a.name)}" placeholder="esim. Säästötili / iShares World"></div>
+  <div class="field" id="tickWrap" ${a.kind==='etf'?'':'hidden'}><label>Kaupankäyntitunnus (vapaaehtoinen)</label><input id="fTick" value="${esc(a.ticker||'')}" placeholder="esim. IWDA.AS" autocapitalize="characters"></div>
+  ${acc?'':`<div class="field" id="startWrap"><label id="startLbl">Nykyinen saldo (€)</label><input id="fStart" inputmode="decimal" placeholder="0,00"></div>
+  <div class="row" id="etfStart" hidden><div class="field"><label>Osuuksia nyt (kpl)</label><input id="fUnits" inputmode="decimal"></div><div class="field"><label>Kurssi nyt (€)</label><input id="fPrice" inputmode="decimal"></div></div>`}
+  <div class="formerr" id="formerr"></div>
+  <div class="actions"><button class="btn ghost" id="cancel">Peruuta</button><button class="btn primary" id="save">Tallenna</button></div>`,
+  ()=>{
+    let kind=a.kind;
+    if(!acc){ bindSeg('kind',v=>{ kind=v; $('#tickWrap').hidden=v!=='etf'; $('#etfStart').hidden=v!=='etf'; $('#startLbl').textContent=v==='etf'?'Tähän mennessä sijoitettu (€)':'Nykyinen saldo (€)'; }); }
+    $('#cancel').onclick=closeSheet;
+    $('#save').onclick=e=>{
+      const name=$('#fName').value.trim(); if(!name){ $('#formerr').textContent='Anna nimi.'; return; }
+      const ticker=kind==='etf'?$('#fTick').value.trim().toUpperCase():'';
+      guarded(e.target, async()=>{
+        if(acc){ await db.collection('accounts').doc(acc.id).update({name,ticker}); return; }
+        const ref=db.collection('accounts').doc();
+        await ref.set({name,kind,ticker,order:Date.now(),createdAt:Date.now()});
+        const start=num($('#fStart').value), units=num($('#fUnits')?.value), price=num($('#fPrice')?.value);
+        if(isFinite(start)&&start!==0 || kind==='etf'&&isFinite(units)&&units!==0){
+          await db.collection('entries').add({accountId:ref.id,amount:isFinite(start)?start:0,units:kind==='etf'&&isFinite(units)?units:0,date:today(),note:'Aloitussaldo',createdAt:Date.now()});
+        }
+        if(kind==='etf'&&isFinite(price)&&price>0){
+          await db.collection('prices').doc(priceKey({id:ref.id,ticker})).set({price,date:today(),source:'käsin'});
+        }
+      });
+    };
+  });
+}
+
+function openEntryForm(accId){
+  const rows=calc(); if(!rows.length) return;
+  let acc=rows.find(r=>r.id===accId)||rows[0];
+  openSheet(`<h3>Kirjaa siirto</h3>
+  <div class="field"><label>Tili</label><select id="eAcc">${rows.map(r=>`<option value="${r.id}" ${r.id===acc.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div>
+  <div id="eBody"></div>
+  <div class="formerr" id="formerr"></div>
+  <div class="actions"><button class="btn ghost" id="cancel">Peruuta</button><button class="btn primary" id="save">Tallenna</button></div>`,
+  ()=>{
+    let mode;
+    const body=()=>{
+      if(acc.kind==='etf'){
+        mode='buy';
+        $('#eBody').innerHTML=seg('m',[['buy','Osto'],['sell','Myynti']],'buy')+
+        `<div class="row"><div class="field"><label>Summa (€)</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div><div class="field"><label>Osuuksia (kpl)</label><input id="eUnits" inputmode="decimal" placeholder="0"></div></div>
+         <div class="field"><label>Päivä</label><input id="eDate" type="date" value="${today()}"></div>
+         <div class="field"><label>Muistiinpano</label><input id="eNote" placeholder="vapaaehtoinen"></div>`;
+        bindSeg('m',v=>mode=v);
+      } else {
+        mode='in';
+        $('#eBody').innerHTML=seg('m',[['in','Talletus'],['out','Nosto'],['set','Aseta saldo']],'in')+
+        `<div class="field"><label id="eAmtLbl">Summa (€)</label><input id="eAmt" inputmode="decimal" placeholder="0,00"></div>
+         <div class="field"><label>Päivä</label><input id="eDate" type="date" value="${today()}"></div>
+         <div class="field"><label>Muistiinpano</label><input id="eNote" placeholder="vapaaehtoinen"></div>`;
+        bindSeg('m',v=>{ mode=v; $('#eAmtLbl').textContent=v==='set'?`Uusi saldo (€) — nyt ${fmt.format(acc.value)}`:'Summa (€)'; });
+      }
+      setTimeout(()=>$('#eAmt').focus(),50);
+    };
+    body();
+    $('#eAcc').onchange=()=>{ acc=calc().find(r=>r.id===$('#eAcc').value); body(); };
+    $('#cancel').onclick=closeSheet;
+    $('#save').onclick=e=>{
+      const amt=num($('#eAmt').value), date=$('#eDate').value||today(), note=$('#eNote').value.trim();
+      if(!isFinite(amt)){ $('#formerr').textContent='Anna summa.'; return; }
+      let doc={accountId:acc.id,date,note,createdAt:Date.now()};
+      if(acc.kind==='etf'){
+        const u=num($('#eUnits').value);
+        if(!isFinite(u)||u<=0){ $('#formerr').textContent='Anna osuuksien määrä.'; return; }
+        const s=mode==='sell'?-1:1; doc.amount=s*Math.abs(amt); doc.units=s*u;
+      } else if(mode==='set'){
+        doc.amount=Math.round((amt-acc.value)*100)/100; doc.note=note||'Saldon korjaus';
+        if(doc.amount===0){ closeSheet(); return; }
+      } else { doc.amount=(mode==='out'?-1:1)*Math.abs(amt); }
+      guarded(e.target, ()=>db.collection('entries').add(doc));
+    };
+  });
+}
+
+function openPriceForm(acc){
+  openSheet(`<h3>Päivitä kurssi</h3><p class="hint">${esc(acc.name)}${acc.ticker?' · '+esc(acc.ticker):''}${isFinite(acc.price)?`<br>Nyt ${fmt.format(acc.price)} (${fdate(acc.priceDate)})`:''}</p>
+  <div class="field"><label>Kurssi (€ / osuus)</label><input id="pVal" inputmode="decimal" placeholder="0,00"></div>
+  <div class="formerr" id="formerr"></div>
+  <div class="actions"><button class="btn ghost" id="cancel">Peruuta</button><button class="btn primary" id="save">Tallenna</button></div>`,
+  ()=>{
+    setTimeout(()=>$('#pVal').focus(),50);
+    $('#cancel').onclick=closeSheet;
+    $('#save').onclick=e=>{ const p=num($('#pVal').value); if(!isFinite(p)||p<=0){ $('#formerr').textContent='Anna kurssi.'; return; }
+      guarded(e.target, ()=>db.collection('prices').doc(priceKey(acc)).set({price:p,date:today(),source:'käsin'})); };
+  });
+}
+
+function openDetail(id){
+  const r=calc().find(x=>x.id===id); if(!r) return;
+  const etf=r.kind==='etf';
+  const hist=r.list.length?`<div class="hist">${r.list.map(e=>`<div><div><div>${esc(e.note||(e.amount>=0?(etf?'Osto':'Talletus'):(etf?'Myynti':'Nosto')))}</div><div class="d">${fdate(e.date)}${etf&&e.units?` · ${e.units>0?'+':''}${fmtN.format(e.units)} kpl`:''}</div></div>
+     <div style="display:flex;align-items:center"><span class="${e.amount<0?'neg':''}" style="font-variant-numeric:tabular-nums">${e.amount>0?'+':''}${fmt.format(e.amount)}</span>${writable?`<button class="x" data-del="${e.id}" aria-label="Poista kirjaus">×</button>`:''}</div></div>`).join('')}</div>`
+    :'<p class="hint" style="margin-top:14px">Ei kirjauksia.</p>';
+  const info = etf ? `<p class="hint">${fmtN.format(r.units)} kpl · sijoitettu ${fmt.format(r.invested)}${r.gain!=null?` · <span class="${r.gain>=0?'pos':'neg'}">${r.gain>=0?'+':''}${fmt.format(r.gain)}</span>`:''}</p>` : '';
+  openSheet(`<div class="label">${etf?'ETF-rahasto':'Pankkitili'}</div><h3>${esc(r.name)}</h3><div class="big">${fmt.format(r.value)}</div>${info}
+  ${writable?`<div class="actions"><button class="btn primary" id="dAdd">+ Kirjaa siirto</button>${etf?'<button class="btn" id="dPrice">Päivitä kurssi</button>':''}</div>`:''}
+  ${hist}
+  <div id="delConfirm"></div>
+  ${writable?`<div class="actions" style="margin-top:12px"><button class="btn ghost" id="dEdit">Muokkaa</button><button class="btn danger" id="dDel">Poista tili</button></div>`:''}`,
+  ()=>{
+    if(!writable) return;
+    $('#dAdd').onclick=()=>openEntryForm(r.id);
+    if(etf) $('#dPrice').onclick=()=>openPriceForm(r);
+    $('#dEdit').onclick=()=>openAccountForm(r);
+    document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+      const eid=b.dataset.del;
+      $('#delConfirm').innerHTML=`<div class="confirm">Poistetaanko tämä kirjaus?<div class="actions"><button class="btn ghost" id="cNo">Ei</button><button class="btn danger" id="cYes">Poista</button></div></div>`;
+      $('#cNo').onclick=()=>$('#delConfirm').innerHTML='';
+      $('#cYes').onclick=async()=>{ try{ await db.collection('entries').doc(eid).delete(); }catch(e){} openDetail(id); };
+    });
+    $('#dDel').onclick=()=>{
+      $('#delConfirm').innerHTML=`<div class="confirm">Poistetaanko ${esc(r.name)} ja sen ${r.list.length} kirjausta pysyvästi?<div class="actions"><button class="btn ghost" id="cNo">Ei</button><button class="btn danger" id="cYes">Poista</button></div></div>`;
+      $('#cNo').onclick=()=>$('#delConfirm').innerHTML='';
+      $('#cYes').onclick=async e=>{ e.target.disabled=true; try{ for(const x of r.list) await db.collection('entries').doc(x.id).delete(); await db.collection('accounts').doc(r.id).delete(); }catch(err){} closeSheet(); };
+    };
+  });
+}
+
+$('#addAccBtn').onclick=()=>openAccountForm();
+$('#fab').onclick=()=>openEntryForm();
+
+/* ---------- data (tallennetaan vain tähän laitteeseen) ---------- */
+const KEY='saastot-v1';
+let store={accounts:{},entries:{},prices:{},lastBackup:null}, remote={};
+function loadStore(){ try{ const t=localStorage.getItem(KEY); if(t){ const d=JSON.parse(t); store={accounts:d.accounts||{},entries:d.entries||{},prices:d.prices||{},lastBackup:d.lastBackup||null}; } }catch(e){ setStatus('Tietojen lukeminen epäonnistui.',true); } }
+function persist(){ try{ localStorage.setItem(KEY,JSON.stringify(store)); }catch(e){ setStatus('Tallennus laitteeseen epäonnistui.',true); throw {code:'unavailable'}; } }
+function newId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function refresh(){
+  accounts=Object.entries(store.accounts).map(([id,a])=>({id,...a})).sort((x,y)=>(x.order||0)-(y.order||0));
+  entries=Object.entries(store.entries).map(([id,e])=>({id,...e}));
+  prices={...store.prices};
+  for(const k in remote){ const r=remote[k], l=prices[k]; if(r&&isFinite(r.price)&&(!l||(r.date||'')>=(l.date||''))) prices[k]=r; }
+  render(); renderBanner();
+}
+db={ collection(name){ return {
+  doc(id){ id=id||newId(); return { id,
+    async set(d){ store[name][id]={...d}; persist(); refresh(); },
+    async update(d){ if(!store[name][id]) throw {code:'invalid_argument'}; store[name][id]={...store[name][id],...d}; persist(); refresh(); },
+    async delete(){ delete store[name][id]; persist(); refresh(); } }; },
+  async add(d){ const r=this.doc(); await r.set(d); return r; } }; } };
+
+async function loadRemotePrices(){
+  try{ const r=await fetch('prices.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return; const j=await r.json(); remote=j.prices||{}; refresh(); }catch(e){}
+}
+
+/* ---------- varmuuskopiot ---------- */
+const hasData=()=>Object.keys(store.accounts).length>0;
+function renderBanner(){
+  const el=$('#backupBanner'); if(!hasData()){ el.innerHTML=''; return; }
+  const days=store.lastBackup?(Date.now()-new Date(store.lastBackup).getTime())/864e5:Infinity;
+  if(days<30){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="banner"><span>${store.lastBackup?'Edellisestä varmuuskopiosta on yli kuukausi.':'Tietosi ovat vain tässä puhelimessa. Tee varmuuskopio.'}</span><button class="btn" id="bkNow">Varmuuskopioi</button></div>`;
+  $('#bkNow').onclick=exportData;
+}
+function exportData(){
+  const d=new Date(), stamp=d.toISOString().slice(0,10);
+  const data={app:'saastot',version:1,exportedAt:d.toISOString(),accounts:store.accounts,entries:store.entries,prices:store.prices};
+  const blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`saastot-varmuuskopio-${stamp}.json`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  store.lastBackup=d.toISOString(); persist(); refresh();
+}
+function importFile(file){
+  const rd=new FileReader();
+  rd.onload=()=>{ let d; try{ d=JSON.parse(rd.result); }catch(e){ $('#formerr').textContent='Tiedostoa ei voitu lukea.'; return; }
+    if(d.app!=='saastot'||!d.accounts){ $('#formerr').textContent='Tämä ei ole Säästöt-sovelluksen varmuuskopio.'; return; }
+    const n=Object.keys(d.accounts).length, m=Object.keys(d.entries||{}).length;
+    $('#impConfirm').innerHTML=`<div class="confirm">Tiedostossa on ${n} tiliä ja ${m} kirjausta${d.exportedAt?' ('+fdate(d.exportedAt)+')':''}. ${hasData()?'Ne <b>korvaavat</b> nykyiset tiedot tässä puhelimessa.':''}<div class="actions"><button class="btn ghost" id="iNo">Peruuta</button><button class="btn primary" id="iYes">Tuo tiedot</button></div></div>`;
+    $('#iNo').onclick=()=>$('#impConfirm').innerHTML='';
+    $('#iYes').onclick=()=>{ store={accounts:d.accounts,entries:d.entries||{},prices:d.prices||{},lastBackup:new Date().toISOString()}; persist(); refresh(); closeSheet(); };
+  };
+  rd.readAsText(file);
+}
+function openSettings(){
+  openSheet(`<h3>Tiedot ja varmuuskopiot</h3>
+  <p class="hint">Tiedot tallentuvat vain tähän puhelimeen. Varmuuskopio on tiedosto, jonka avulla tiedot saa palautettua esimerkiksi uuteen puhelimeen. Säilytä se vaikka Google Drivessa.<br><br>Edellinen varmuuskopio: <b>${store.lastBackup?fdate(store.lastBackup):'ei vielä'}</b></p>
+  <div class="actions"><button class="btn primary" id="sExp" ${hasData()?'':'disabled'}>Tee varmuuskopio</button><button class="btn" id="sImp">Tuo varmuuskopio</button></div>
+  <input type="file" id="sFile" accept=".json,application/json" hidden>
+  <div class="formerr" id="formerr"></div><div id="impConfirm"></div>
+  <p class="hint" style="margin-top:18px">Kurssit päivittyvät automaattisesti arki-iltaisin rahastoille, joiden tunnus on mukana kurssihaussa (nyt IUSQ ja SPYI). Muiden kurssin voi päivittää käsin.</p>
+  <div class="actions"><button class="btn ghost" id="sClose">Sulje</button></div>`,
+  ()=>{ $('#sExp').onclick=()=>{ exportData(); closeSheet(); }; $('#sImp').onclick=()=>$('#sFile').click();
+    $('#sFile').onchange=e=>{ const f=e.target.files[0]; if(f) importFile(f); }; $('#sClose').onclick=closeSheet; });
+}
+$('#setBtn').onclick=openSettings;
+
+loadStore(); refresh(); loadRemotePrices();
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') loadRemotePrices(); });
+try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+name: Julkaisu ja kurssit
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '50 16 * * 1-5'   # arkipäivisin klo 18.50 Suomen talviaikaa (17.50 kesäaikaa) – UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  julkaise:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Hae kurssit
+        continue-on-error: true
+        run: node scripts/hae-kurssit.mjs
+
+      - name: Tallenna kurssit
+        run: |
+          if ! git diff --quiet -- prices.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add prices.json
+            git commit -m "Kurssipäivitys $(date -u +%F)"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

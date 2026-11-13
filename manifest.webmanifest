@@ -1,0 +1,17 @@
+{
+  "name": "Säästöt",
+  "short_name": "Säästöt",
+  "description": "Pankkitilien ja ETF-rahastojen seuranta",
+  "lang": "fi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c1a2a",
+  "theme_color": "#0c1a2a",
+  "icons": [
+    {"src": "kuvake-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "kuvake-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "kuvake-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
