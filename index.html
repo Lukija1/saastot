@@ -220,7 +220,7 @@ function openAccountForm(acc){
           await db.collection('entries').add({accountId:ref.id,amount:isFinite(start)?start:0,units:kind==='etf'&&isFinite(units)?units:0,date:today(),note:'Aloitussaldo',createdAt:Date.now()});
         }
         if(kind==='etf'&&isFinite(price)&&price>0){
-          await db.collection('prices').doc(priceKey({id:ref.id,ticker})).set({price,date:today(),source:'käsin'});
+          await db.collection('prices').doc(priceKey({id:ref.id,ticker})).set({price,date:today(),source:'käsin',at:Date.now()});
         }
       });
     };
@@ -284,7 +284,7 @@ function openPriceForm(acc){
     setTimeout(()=>$('#pVal').focus(),50);
     $('#cancel').onclick=closeSheet;
     $('#save').onclick=e=>{ const p=num($('#pVal').value); if(!isFinite(p)||p<=0){ $('#formerr').textContent='Anna kurssi.'; return; }
-      guarded(e.target, ()=>db.collection('prices').doc(priceKey(acc)).set({price:p,date:today(),source:'käsin'})); };
+      guarded(e.target, ()=>db.collection('prices').doc(priceKey(acc)).set({price:p,date:today(),source:'käsin',at:Date.now()})); };
   });
 }
 
@@ -324,7 +324,7 @@ $('#fab').onclick=()=>openEntryForm();
 
 /* ---------- data (tallennetaan vain tähän laitteeseen) ---------- */
 const KEY='saastot-v1';
-let store={accounts:{},entries:{},prices:{},lastBackup:null}, remote={};
+let store={accounts:{},entries:{},prices:{},lastBackup:null}, remote={}, remoteAt=0;
 function loadStore(){ try{ const t=localStorage.getItem(KEY); if(t){ const d=JSON.parse(t); store={accounts:d.accounts||{},entries:d.entries||{},prices:d.prices||{},lastBackup:d.lastBackup||null}; } }catch(e){ setStatus('Tietojen lukeminen epäonnistui.',true); } }
 function persist(){ try{ localStorage.setItem(KEY,JSON.stringify(store)); }catch(e){ setStatus('Tallennus laitteeseen epäonnistui.',true); throw {code:'unavailable'}; } }
 function newId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -332,7 +332,7 @@ function refresh(){
   accounts=Object.entries(store.accounts).map(([id,a])=>({id,...a})).sort((x,y)=>(x.order||0)-(y.order||0));
   entries=Object.entries(store.entries).map(([id,e])=>({id,...e}));
   prices={...store.prices};
-  for(const k in remote){ const r=remote[k], l=prices[k]; if(r&&isFinite(r.price)&&(!l||(r.date||'')>=(l.date||''))) prices[k]=r; }
+  for(const k in remote){ const r=remote[k], l=prices[k]; if(r&&isFinite(r.price)&&(!l||(r.date||'')>(l.date||'')||((r.date||'')===(l.date||'')&&remoteAt>(l.at||0)))) prices[k]=r; }
   render(); renderBanner();
 }
 db={ collection(name){ return {
@@ -343,7 +343,7 @@ db={ collection(name){ return {
   async add(d){ const r=this.doc(); await r.set(d); return r; } }; } };
 
 async function loadRemotePrices(){
-  try{ const r=await fetch('prices.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return; const j=await r.json(); remote=j.prices||{}; refresh(); }catch(e){}
+  try{ const r=await fetch('prices.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return; const j=await r.json(); remote=j.prices||{}; remoteAt=Date.parse(j.updated)||0; refresh(); }catch(e){}
 }
 
 /* ---------- varmuuskopiot ---------- */
