@@ -1,14 +1,14 @@
 {
-  "updated": "2026-11-17T17:47:30.773Z",
+  "updated": "2026-11-18T17:42:46.758Z",
   "prices": {
     "IUSQ": {
-      "price": 105.92,
-      "date": "2026-11-17",
+      "price": 105.9,
+      "date": "2026-11-18",
       "source": "Xetra (Yahoo Finance)"
     },
     "SPYI": {
-      "price": 11.382,
-      "date": "2026-11-17",
+      "price": 11.376,
+      "date": "2026-11-18",
       "source": "Xetra (Yahoo Finance)"
     }
   }
