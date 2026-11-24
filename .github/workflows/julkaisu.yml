@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.julkaisu2.outputs.page_url || steps.julkaisu1.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -46,5 +46,17 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: .
-      - id: deployment
+
+      # GitHubin julkaisupalvelussa on toisinaan hetkellisiä häiriöitä:
+      # jos julkaisu epäonnistuu, odotetaan hetki ja yritetään vielä kerran.
+      - id: julkaisu1
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Odota ennen uutta yritystä
+        if: steps.julkaisu1.outcome == 'failure'
+        run: sleep 60
+
+      - id: julkaisu2
+        if: steps.julkaisu1.outcome == 'failure'
         uses: actions/deploy-pages@v4
